@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-const MY_LOCAL_IP = '172.20.10.14'; 
+// ТВОЯ ССЫЛКА ОТ RENDER (уже вставил)
+const RENDER_HOST = 'krn-0s8n.onrender.com'; 
 
 function App() {
   const [role, setRole] = useState(null);
@@ -13,10 +14,16 @@ function App() {
   const [sortOrder, setSortOrder] = useState('new');
   const [zoomImg, setZoomImg] = useState(null);
 
-  const host = window.location.hostname;
-  const SERVER_URL = (host === 'localhost' || host === '127.0.0.1') 
-    ? `http://localhost:3000` 
-    : `http://${MY_LOCAL_IP}:3000`;
+  // Логика выбора сервера: если ты дома на localhost - работает локально, если в сети - через Render
+  const getBaseUrl = () => {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return `http://localhost:3000`;
+    }
+    return `https://${RENDER_HOST}`;
+  };
+
+  const SERVER_URL = getBaseUrl();
 
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('krn_user');
@@ -48,7 +55,7 @@ function App() {
         else grouped.push({ time: ts, items: [f] });
       });
       setPosts(grouped);
-    } catch { console.log('Err'); }
+    } catch { console.log('Connect error'); }
   };
 
   useEffect(() => { if (role) fetchData(); }, [role, sortOrder]);
@@ -92,13 +99,11 @@ function App() {
   return (
     <div className="layout" style={{ background: user.bg }}>
       <div className="sakura-box">{petals.map((p, i) => <div key={i} className="petal" style={{left:p.left+'vw', animationDelay:p.delay+'s', animationDuration:p.duration+'s', fontSize:p.size+'px'}}>🌸</div>)}</div>
-      
       <header className="navbar" style={{ borderBottom: `2px solid ${user.accent}` }}>
         <div className="logo" onClick={() => setRole(null)}>⛩️</div>
         <div className="nav-right">
           <div className="pill" onClick={() => setSortOrder(sortOrder === 'new' ? 'old' : 'new')} style={{ border: `1px solid ${user.accent}`, color: user.accent }}>{sortOrder === 'new' ? 'NEW' : 'OLD'}</div>
-          {/* Кнопка профиля теперь просто функция переключения */}
-          <div className="prof" onClick={() => setShowSettings(!showSettings)} style={{ border: `1px solid ${user.accent}`, backgroundImage: `url(${user.avatar})`, backgroundSize: 'cover' }}>{!user.avatar && '⚙️'}</div>
+          <div className="prof" onClick={() => setShowSettings(!showSettings)} style={{ border: `1px solid ${user.accent}`, backgroundImage: `url(${user.avatar})`, backgroundSize:'cover' }}>{!user.avatar && '⚙️'}</div>
           {role === 'admin' && (
             <label className="add" style={{ background: user.accent }}>ADD<input type="file" multiple onChange={(e)=>{
               setLoading(true); const fd = new FormData(); for(let f of e.target.files) fd.append('files', f);
@@ -107,19 +112,17 @@ function App() {
           )}
         </div>
       </header>
-
       <div className="tabs">
         <div onClick={() => setViewMode('all')} style={{ color: viewMode === 'all' ? user.accent : '#555', borderBottom: viewMode === 'all' ? `3px solid ${user.accent}` : 'none' }}>STREAM</div>
         <div onClick={() => setViewMode('favorites')} style={{ color: viewMode === 'favorites' ? user.accent : '#555', borderBottom: viewMode === 'favorites' ? `3px solid ${user.accent}` : 'none' }}>PRIVATE ❤️</div>
       </div>
-
       <main className="feed">
         {posts.map((post, idx) => {
           let items = post.items.filter(f => viewMode === 'favorites' ? likedFiles.includes(f) : true);
           if (items.length === 0) return null;
           return (
             <div key={idx} className="card" style={{ border: `1px solid ${user.accent}20` }}>
-              <div className="card-top"><b>{user.name}</b> {role === 'admin' && <span onClick={()=>{if(window.confirm('Del?')) fetch(`${SERVER_URL}/delete/${post.items[0]}`, {method:'DELETE'}).then(fetchData)}}>🗑️</span>}</div>
+              <div className="card-top"><b>{user.name}</b></div>
               <div className="scroll no-s">
                 {items.map((file, i) => (
                   <div key={i} className="slide">
@@ -136,7 +139,6 @@ function App() {
           );
         })}
       </main>
-
       {showSettings && (
         <div className="modal-overlay" onClick={() => setShowSettings(false)}>
           <div className="modal-card" onClick={e => e.stopPropagation()} style={{ border: `1px solid ${user.accent}` }}>
@@ -151,7 +153,6 @@ function App() {
           </div>
         </div>
       )}
-
       {zoomImg && <div className="zoom" onClick={() => setZoomImg(null)}><img src={zoomImg} alt="" /></div>}
       <style>{CSS(user)}</style>
     </div>
@@ -171,16 +172,16 @@ const CSS = (u) => `
   .login-card input { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 10px; border: 1px solid #333; background: #000; color: #fff; text-align: center; }
   .login-card button { width: 100%; padding: 12px; border: none; border-radius: 10px; color: #fff; font-weight: bold; cursor: pointer; }
   .guest { margin-top: 20px; color: #444; font-size: 11px; cursor: pointer; }
-  .navbar { position: sticky; top: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); padding: 12px 20px; width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+  .navbar { position: sticky; top: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); padding: 12px 20px; width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; z-index: 100; border-bottom: 1px solid #111; }
   .nav-right { display: flex; gap: 15px; align-items: center; }
-  .prof { width: 35px; height: 35px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; background-color: #111; position: relative; z-index: 110; }
+  .prof { width: 35px; height: 35px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; background-color: #111; }
   .pill { font-size: 10px; padding: 5px 10px; border-radius: 15px; cursor: pointer; font-weight: bold; }
   .add { padding: 7px 15px; border-radius: 8px; color: #fff; font-size: 11px; font-weight: bold; cursor: pointer; }
   .tabs { width: 100%; max-width: 800px; background: rgba(0,0,0,0.5); display: flex; text-align: center; font-weight: bold; font-size: 13px; }
   .tabs div { flex: 1; padding: 15px; cursor: pointer; }
   .feed { width: 100%; max-width: 600px; padding: 20px 0; display: flex; flex-direction: column; align-items: center; z-index: 5; }
   .card { width: 95%; background: rgba(255,255,255,0.03); border-radius: 25px; overflow: hidden; margin-bottom: 30px; }
-  .card-top { padding: 12px 20px; display: flex; justify-content: space-between; color: #fff; font-size: 14px; }
+  .card-top { padding: 12px 20px; color: #fff; font-size: 14px; }
   .scroll { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
   .slide { min-width: 100%; scroll-snap-align: start; position: relative; }
   .m-el { width: 100%; display: block; }
